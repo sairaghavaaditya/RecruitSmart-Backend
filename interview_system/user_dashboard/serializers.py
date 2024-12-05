@@ -11,6 +11,6 @@ class UserSerializer(serializers.ModelSerializer):
 class JobPostSerializer(serializers.ModelSerializer):
     class Meta:
         model = JobPost
-        fields = ['id', 'title', 'description', 'created_at', 'is_active']
+        fields = ['id','command_id','title', 'description', 'created_at', 'is_active']
     
 

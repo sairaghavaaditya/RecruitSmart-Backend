@@ -18,10 +18,10 @@ nltk.download('wordnet', quiet=True)
 from transformers import AutoTokenizer, AutoModel
 
 # Global tokenizer and model
-TOKENIZER = AutoTokenizer.from_pretrained('microsoft/deberta-v3-base')
-MODEL = AutoModel.from_pretrained('microsoft/deberta-v3-base')
+# TOKENIZER = AutoTokenizer.from_pretrained('microsoft/deberta-v3-base')
+# MODEL = AutoModel.from_pretrained('microsoft/deberta-v3-base')
 
-def evaluate_technical_answer(expected_answer, candidate_answer, keywords):
+def evaluate_technical_answer(question_g,expected_answer, candidate_answer, keywords):
     """
     Evaluate a technical answer based on expected answer, candidate answer, and keywords.
     
@@ -93,10 +93,10 @@ def evaluate_technical_answer(expected_answer, candidate_answer, keywords):
     )[0][0]
     print("Step: Final score calculation")
     # Detect exact or paraphrase
-    processed_expected = preprocess_text(expected_answer)
+    processed_expected = preprocess_text(question_g)
     processed_candidate = preprocess_text(candidate_answer)
     similarity_ratio = SequenceMatcher(None, processed_expected, processed_candidate).ratio()
-    
+
     # Final score calculation
     if similarity_ratio >= 0.9:
         # Exact match or very close paraphrase - minimal score
@@ -111,7 +111,7 @@ def evaluate_technical_answer(expected_answer, candidate_answer, keywords):
     # Ensure score is between 0 and 10
     return max(0, min(10, final_score))
 
-# # Example usage
+# Example usage
 # if __name__ == "__main__":
 #     # Example keywords dictionary
 #     example_keywords = {
