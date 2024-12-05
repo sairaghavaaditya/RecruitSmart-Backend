@@ -21,17 +21,18 @@ from transformers import AutoTokenizer, AutoModel
 # TOKENIZER = AutoTokenizer.from_pretrained('microsoft/deberta-v3-base')
 # MODEL = AutoModel.from_pretrained('microsoft/deberta-v3-base')
 
-def evaluate_technical_answer(question_g,expected_answer, candidate_answer, keywords):
+def evaluate_technical_answer(question, expected_answer, candidate_answer, keywords):
     """
-    Evaluate a technical answer based on expected answer, candidate answer, and keywords.
+    Evaluate a technical answer based on question, expected answer, candidate answer, and keywords.
     
     Args:
-    - expected_answer (str): The correct/reference answer
-    - candidate_answer (str): The answer provided by the candidate
-    - keywords (dict): Dictionary of keywords categorized by importance
+    - question (str): The question being answered.
+    - expected_answer (str): The correct/reference answer.
+    - candidate_answer (str): The answer provided by the candidate.
+    - keywords (dict): Dictionary of keywords categorized by importance.
     
     Returns:
-    - float: Final score out of 10
+    - float: Final score out of 10.
     """
     # Initialize text processing tools
     lemmatizer = WordNetLemmatizer()
@@ -47,7 +48,6 @@ def evaluate_technical_answer(question_g,expected_answer, candidate_answer, keyw
     
     def preprocess_text(text):
         """Advanced text preprocessing"""
-        print("Step: Preprocessing candidate answer")
         # Convert to lowercase and remove punctuation
         text = text.lower()
         text = re.sub(r'[^\w\s]', ' ', text)
@@ -61,15 +61,12 @@ def evaluate_technical_answer(question_g,expected_answer, candidate_answer, keyw
     
     def get_embeddings(text, tokenizer, model):
         """Get embeddings using DeBERTa"""
-        
-        
         inputs = tokenizer(text, return_tensors='pt', padding=True, truncation=True, max_length=512)
         with torch.no_grad():
             outputs = model(**inputs)
         return outputs.last_hidden_state.mean(dim=1)
     
     # Evaluate technical accuracy
-    print("Step: Start processing user input")
     processed_answer = preprocess_text(candidate_answer)
     keyword_score = 0
     
@@ -81,9 +78,9 @@ def evaluate_technical_answer(question_g,expected_answer, candidate_answer, keyw
         keyword_score += category_score * weight
     
     # Semantic similarity
+    print("Step: Generating embeddings")
     tokenizer = AutoTokenizer.from_pretrained('microsoft/deberta-v3-base')
     model = AutoModel.from_pretrained('microsoft/deberta-v3-base')
-    print("Step: Generating embeddings")
     exp_embedding = get_embeddings(expected_answer, tokenizer, model)
     cand_embedding = get_embeddings(candidate_answer, tokenizer, model)
     
@@ -91,23 +88,32 @@ def evaluate_technical_answer(question_g,expected_answer, candidate_answer, keyw
         exp_embedding.numpy(),
         cand_embedding.numpy()
     )[0][0]
-    print("Step: Final score calculation")
-    # Detect exact or paraphrase
-    processed_expected = preprocess_text(question_g)
+    
+    # Question similarity
+    processed_question = preprocess_text(question)
     processed_candidate = preprocess_text(candidate_answer)
+    question_similarity = SequenceMatcher(None, processed_question, processed_candidate).ratio()
+    
+    if processed_question == processed_candidate:
+        return 0  # Exact match to the question
+    elif question_similarity > 0.9:
+        return 2  # High similarity with the question
+    
+    # Expected answer similarity
+    processed_expected = preprocess_text(expected_answer)
     similarity_ratio = SequenceMatcher(None, processed_expected, processed_candidate).ratio()
-
+    
     # Final score calculation
     if similarity_ratio >= 0.9:
-        # Exact match or very close paraphrase - minimal score
-        return 3.0
+    # Exact match or very close paraphrase - perfect score
+        return 10.0
     elif similarity_ratio >= 0.75:
-        # Paraphrase - reduce scores
-        final_score = (keyword_score * 0.8 + semantic_score * 0.8) * 5
+    # Moderate match - high score with a slight reduction
+        final_score = (keyword_score * 0.9 + semantic_score * 0.8) * 5
     else:
-        # Different answer - full scoring
-        final_score = (keyword_score + semantic_score) * 5
-    
+    # Different answer - full scoring based on other factors
+        final_score = (keyword_score + semantic_score)*5*0.8
+
     # Ensure score is between 0 and 10
     return max(0, min(10, final_score))
 

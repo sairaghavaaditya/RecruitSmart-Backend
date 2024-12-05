@@ -41,7 +41,7 @@ def submit_response(request):
             keywords = question.keywords
 
             score = evaluate_technical_answer(
-                question_g=question.question,
+                question=question.question,
                 expected_answer=question.answer,
                 candidate_answer=user_answer,
                 keywords=keywords
