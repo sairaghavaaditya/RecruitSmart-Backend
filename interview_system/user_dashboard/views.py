@@ -16,10 +16,6 @@ from .serializers import JobPostSerializer
 
 from difflib import SequenceMatcher
 
-# Helper function to calculate similarity
-
-
-
 
 @csrf_exempt
 def submit_response(request):
