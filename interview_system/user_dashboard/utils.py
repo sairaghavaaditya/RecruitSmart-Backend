@@ -17,7 +17,7 @@ nltk.download('wordnet', quiet=True)
 
 from transformers import AutoTokenizer, AutoModel
 
-# Global tokenizer and model
+# # Global tokenizer and model
 # TOKENIZER = AutoTokenizer.from_pretrained('microsoft/deberta-v3-base')
 # MODEL = AutoModel.from_pretrained('microsoft/deberta-v3-base')
 
