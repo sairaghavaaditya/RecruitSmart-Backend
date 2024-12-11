@@ -23,9 +23,9 @@ class Question(models.Model):
     command_id = models.CharField(max_length=100, null=True)
     id = models.AutoField(primary_key=True)
     question = models.TextField()
-    answer = models.TextField()
+    answer = models.TextField(null=True)
     difficulty = models.CharField(max_length=20)  # Ensure valid difficulty levels
-    keywords = models.JSONField(default=dict)
+    keywords = models.JSONField(default=dict,null=True)
 
     def __str__(self):
         return self.question

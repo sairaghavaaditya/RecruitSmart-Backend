@@ -56,15 +56,100 @@ class ResumeUploadView(APIView):
         
         # Generate interview questions
         interview_questions = self.generate_interview_questions(resume_data)
+
+        command_id = kwargs.get('command_id')  # Get command_id from URL parameters
+        print(command_id)
+
+        job_post = JobPost.objects.filter(command_id=command_id).first()
+
+
+        if not job_post:
+            # If no existing JobPost is found, create a new one
+            job_post = JobPost.objects.create(
+                title="Default Title",  # You can set a default title or leave it blank
+                description="Default Description",  # Set a default description or leave it blank
+                command_id=command_id  # Store the command_id if needed
+            )
+
+
+        for question_text in interview_questions:
+            expected_answer, keywords = self.generate_expected_answer_and_keywords(question_text, resume_data)
+            Question.objects.create(
+                job_post=job_post,  # Set to None or link to a specific JobPost if needed
+                command_id=command_id,
+                question=question_text,
+                answer=expected_answer,  # Set answer to None
+                difficulty='Easy',  # Set a default difficulty or modify as needed
+                keywords=keywords  # Set keywords to None
+            )
+
         
         # Clean up temporary file
         os.remove(file_path)
-        
-        return Response({
-            'resume_data': resume_data,
-            'interview_questions': interview_questions
-        }, status=status.HTTP_200_OK)
+
+
+        return Response({'message': 'Resume uploaded successfully!'}, status=status.HTTP_200_OK)
     
+    import json
+
+    def generate_expected_answer_and_keywords(self, question_text, resume_data):
+        """
+        Generate expected answer and keywords based on the question and resume data.
+
+        Args:
+        - question_text (str): The interview question text.
+        - resume_data (dict): The parsed resume data containing skills, education, and experience.
+
+        Returns:
+        - tuple: (expected_answer, keywords_json)
+        """
+        expected_answer = ""
+        keywords = {
+            "concepts": [],
+            "best_practices": [],
+            "implementation": [],
+            "technical_terms": []
+        }
+
+        # Analyze the question to determine the expected answer
+        if "experience" in question_text.lower():
+            # Generate an answer based on the experience section
+            if resume_data['experience']:
+                expected_answer = "I have experience in " + ", ".join(resume_data['experience']) + "."
+                keywords["concepts"].extend([exp.lower() for exp in resume_data['experience']])
+            else:
+                expected_answer = "I have relevant experience in my previous roles."
+        
+        elif "skill" in question_text.lower() or "proficient" in question_text.lower():
+            # Generate an answer based on the skills section
+            if resume_data['skills']:
+                expected_answer = "I am proficient in " + ", ".join(resume_data['skills']) + "."
+                keywords["technical_terms"].extend([skill.lower() for skill in resume_data['skills']])
+            else:
+                expected_answer = "I have developed various skills through my education and projects."
+
+        elif "education" in question_text.lower():
+            # Generate an answer based on the education section
+            if resume_data['education']:
+                expected_answer = "I graduated with a " + ", ".join(resume_data['education']) + "."
+                keywords["concepts"].extend([edu.lower() for edu in resume_data['education']])
+            else:
+                expected_answer = "I have completed my education and am eager to apply my knowledge."
+
+        else:
+            # Default answer if the question does not match known patterns
+            expected_answer = "I am eager to discuss my qualifications and how they relate to this position."
+
+        # Example of adding best practices and implementation terms
+        # This is just a placeholder; you can modify it based on your actual logic
+        if "decision tree" in question_text.lower():
+            keywords["best_practices"].extend(["pruning", "depth control", "parameter tuning"])
+            keywords["implementation"].extend(["gini index", "entropy"])
+
+        # Convert keywords to JSON format
+        keywords_json = json.dumps(keywords)
+
+        return expected_answer, keywords_json
     def extract_text_from_pdf(self, file_path):
         with open(file_path, 'rb') as file:
             reader = PyPDF2.PdfReader(file)
@@ -176,7 +261,7 @@ class ResumeUploadView(APIView):
         
         questions.extend(generic_questions)
         
-        return questions[:10]  # Limit to 10 questions
+        return questions[:5]  # Limit to 10 questions
 
 
 
@@ -216,7 +301,7 @@ def submit_response(request):
             )
             print("Response created:", response)  # Debugging response creation
 
-            return JsonResponse({"message": "Response submitted successfully!", "score": score})
+            return JsonResponse({"message": "Response submitted successfully!", "score": float(score)})
 
         except Question.DoesNotExist:
             return JsonResponse({"error": "Question not found."}, status=404)
